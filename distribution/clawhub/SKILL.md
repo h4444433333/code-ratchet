@@ -10,6 +10,11 @@ allowed-tools:
   - Bash(curl -sSf https://raw.githubusercontent.com/h4444433333/code-ratchet/*)
   - Bash(uname *)
   - Bash(git init)
+  - Bash(git clone *)
+  - Bash(gh auth status)
+  - Bash(gh repo clone *)
+  - Bash(pwd)
+  - Bash(ls *)
   - Read(*)
 ---
 
@@ -17,29 +22,61 @@ allowed-tools:
 
 You are working in a repo where code quality is governed by **code-ratchet**:
 persisted "best-ever" lint/type/test/coverage metrics, with any worsening
-change rejected at `git commit` time. This Skill auto-installs and
-auto-configures the tool — the user expects to install this Skill once,
-ask normal questions, and find the ratchet just working.
+change rejected at `git commit` time. This Skill must make onboarding feel
+automatic: if the repo is already present, engage the ratchet; if the user
+gave a GitHub repo and the code is not local yet, clone it first; if auth is
+required, guide the user to use their local GitHub auth without ever asking
+for a password.
 
 Project home (source, issues, releases):
 **https://github.com/h4444433333/code-ratchet**
 
 ## Step 0 — bootstrap (every session, runs silently)
 
-Before doing anything else in a code-changing task, ensure the tool is
-installed and the current repo is set up. Both checks are cheap.
+Before doing anything else in a code-changing task, ensure you are in the
+right repo, the tool is installed, and the repo is set up. Keep the user
+experience smooth: prefer doing the work silently and only interrupt when a
+real choice or auth boundary exists.
 
-### 0a. Is `code-ratchet` on PATH?
+### 0a. Decide what repo you are operating on
+
+Use this decision order:
+
+1. If the current directory is already the user's project repo, stay there.
+2. If the user provided a GitHub URL or `owner/repo` and the repo is not
+   present locally, clone it first.
+3. If the user is clearly asking to try or inspect **code-ratchet itself**
+   and no target repo is given, clone:
+   ```
+   https://github.com/h4444433333/code-ratchet
+   ```
+4. If the target repo is ambiguous, ask one concise question instead of
+   guessing.
+
+For cloning:
+
+- **Public repo**: clone directly with `git clone` or `gh repo clone`.
+- **Private repo**: first check `gh auth status`.
+  - If auth is already present, clone normally.
+  - If auth is missing, tell the user to run `gh auth login` locally, then
+    continue after they confirm.
+
+Never ask the user for a GitHub username, password, PAT, or SSH private key.
+Always rely on the machine's existing git/gh/SSH auth.
+
+After clone, `cd` into the repo root and continue with the steps below.
+
+### 0b. Is `code-ratchet` on PATH?
 
 Run:
 ```
 command -v code-ratchet >/dev/null 2>&1 && code-ratchet --version
 ```
 
-- If it prints a version → continue to 0b.
+- If it prints a version → continue to 0c.
 - If not found → install it as below, then re-verify.
 
-### 0b. Installing code-ratchet (only when missing)
+### 0c. Installing code-ratchet (only when missing)
 
 Pick the first that works on this machine:
 
@@ -66,7 +103,7 @@ After install, run `code-ratchet --version` again to confirm.
 If install fails (network, permissions, etc.), surface the exact error
 to the user and stop — do not silently proceed.
 
-### 0c. Is this repo set up?
+### 0d. Is this repo set up?
 
 If `.ratchet.yml` exists at repo root → already set up, skip to Step 1's
 end (read `AGENTS.md`).
@@ -84,6 +121,20 @@ If the repo is not a git repo (no `.git/`), the pre-commit step is
 silently skipped. The other artifacts are still written, so the LLM-side
 rules (AGENTS.md) and the in-CLI checks still work; the user just won't
 get commit-time enforcement until they `git init`.
+
+### 0e. Default smooth-path behaviors
+
+Apply these defaults unless the user asked for something else:
+
+- If you can clone and set up without asking, do it.
+- If auth is needed, ask only for the minimum next step:
+  > "I need your local GitHub auth for this private repo. Please run
+  > `gh auth login`, then tell me to continue."
+- If the repo is already local, do not explain the bootstrap in detail; just
+  engage the ratchet and move on.
+- If the user only wants to **use** code-ratchet rather than modify its
+  source, prefer installing the binary and setting up their target repo over
+  cloning the `code-ratchet` source tree.
 
 ## Step 1 — read AGENTS.md and follow it
 
@@ -114,11 +165,10 @@ Keep bootstrap output minimal — one line if everything went smoothly:
 > ✓ code-ratchet engaged (baseline tests=N, coverage=X%). Now working on
 > your task...
 
-If you had to install the binary or run setup for the first time, add
-one line:
+If you had to clone/install/setup for the first time, add one line:
 
-> Installed code-ratchet via `cargo install`. Setup wrote .ratchet.yml +
-> AGENTS.md + git pre-commit hook to this repo.
+> Cloned the repo, installed code-ratchet, and engaged the ratchet
+> (`.ratchet.yml` + `AGENTS.md` + git pre-commit hook).
 
 Then proceed with the user's actual request. Don't lecture; the AGENTS.md
 file does the teaching.
@@ -133,6 +183,8 @@ AGENTS.md even exists in the repo:
   `test_count` is gated; the ratchet catches this exact failure mode.
 - **Never weaken `.ratchet.yml`** (empty out a command, set `required:
   false`) without explicit user approval.
+- **Never ask the user for GitHub credentials.** Use existing local auth or
+  tell them to run `gh auth login` themselves.
 - **Fail loud.** If the ratchet can't be passed within this turn, say so
   and stop. Do not claim partial success.
 
@@ -156,3 +208,27 @@ tool it depends on.
 Project home, full README, issues, releases:
 **https://github.com/h4444433333/code-ratchet**
 Star the repo if it helps.
+
+## Quick onboarding examples
+
+### Example A — user already opened a local repo
+
+1. Confirm `code-ratchet` is installed.
+2. Run `code-ratchet setup -y` if `.ratchet.yml` is missing.
+3. Read `AGENTS.md`.
+4. Work normally and finish with `code-ratchet check`.
+
+### Example B — user gives a public GitHub repo
+
+1. Clone the repo silently.
+2. `cd` into it.
+3. Install `code-ratchet` if missing.
+4. Run `code-ratchet setup -y`.
+5. Read `AGENTS.md` and continue the task.
+
+### Example C — user gives a private GitHub repo
+
+1. Check `gh auth status`.
+2. If logged in, clone and continue.
+3. If not logged in, ask the user to run `gh auth login`.
+4. After they confirm, clone, set up, and continue.
