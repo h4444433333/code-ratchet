@@ -9,15 +9,30 @@ Markdown wrapper whose job is to:
    commands.
 3. Drive traffic to the GitHub repo (where stars, issues, releases live).
 
-## What gets uploaded
+## What this Skill actually does
 
-A single file: `SKILL.md`.
+It is **agentic, not passive**. When a user installs it from clawhub and
+asks Claude for any code-change task in a repo, the Skill instructs
+Claude to:
 
-The frontmatter at the top is what clawhub indexes for search:
-- `name` — must match `code-ratchet`; this is the slug.
-- `description` — first 2 lines are what users see in the listing.
-  Front-load the keywords that matter (LLM, quality, ratchet, AGENTS.md).
-- `keywords` — clawhub uses these for tag-based discovery.
+1. Detect if `code-ratchet` is on PATH; if not, install it
+   (`cargo install code-ratchet` preferred; falls back to the
+   curl-bash one-liner on macOS/Linux).
+2. Check if the current repo has `.ratchet.yml`; if not, run
+   `code-ratchet setup -y` to write the 4 artifact files and seed
+   the baseline.
+3. Read the `AGENTS.md` the setup just wrote and apply its four-phase
+   loop + hard rules to the user's request.
+4. Run `code-ratchet check` before declaring the task complete.
+
+The user experience is: install the Skill once → ask normal questions
+forever after → ratchet just works. They never type a `cargo install`
+or `code-ratchet setup` command themselves.
+
+The Skill's `allowed-tools` frontmatter pre-authorizes the specific
+shell commands needed for bootstrap (`cargo install code-ratchet`, the
+official curl-bash installer URL, and all `code-ratchet *` subcommands),
+so Claude doesn't have to prompt the user for permission on each step.
 
 ## Uploading
 
