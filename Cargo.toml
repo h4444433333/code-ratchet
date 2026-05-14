@@ -1,14 +1,14 @@
 [package]
 name = "code-ratchet"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 rust-version = "1.74"
 license = "MIT"
 description = "A complexity ratchet for AI-assisted code: persisted quality metrics that only ever ratchet upward, with a git pre-commit gate and a single AGENTS.md rules file that any LLM/IDE can read."
 authors = ["code-ratchet contributors"]
-repository = "https://github.com/yourname/code-ratchet"
-homepage = "https://github.com/yourname/code-ratchet"
-documentation = "https://github.com/yourname/code-ratchet#readme"
+repository = "https://github.com/h4444433333/code-ratchet"
+homepage = "https://github.com/h4444433333/code-ratchet"
+documentation = "https://github.com/h4444433333/code-ratchet#readme"
 readme = "README.md"
 keywords = ["llm", "ai", "quality", "ratchet", "agents"]
 categories = ["command-line-utilities", "development-tools::testing"]

@@ -2,8 +2,8 @@
 # code-ratchet — one-line installer.
 #
 # Usage:
-#   curl -sSf https://raw.githubusercontent.com/<author>/code-ratchet/main/install.sh | bash
-#   curl -sSf https://raw.githubusercontent.com/<author>/code-ratchet/main/install.sh | bash -s -- --no-setup
+#   curl -sSf https://raw.githubusercontent.com/h4444433333/code-ratchet/main/install.sh | bash
+#   curl -sSf https://raw.githubusercontent.com/h4444433333/code-ratchet/main/install.sh | bash -s -- --no-setup
 #
 # What it does:
 #   1. Detects OS + arch (darwin/linux × arm64/x86_64).
@@ -15,7 +15,7 @@
 
 set -euo pipefail
 
-REPO="${CODE_RATCHET_REPO:-<author>/code-ratchet}"
+REPO="${CODE_RATCHET_REPO:-h4444433333/code-ratchet}"
 VERSION="${CODE_RATCHET_VERSION:-latest}"
 
 RUN_SETUP=1
@@ -27,7 +27,7 @@ for arg in "$@"; do
 Usage: install.sh [--no-setup]
   --no-setup   Install the binary only; do not run setup in the cwd.
 Environment:
-  CODE_RATCHET_REPO     GitHub repo (default: <author>/code-ratchet)
+  CODE_RATCHET_REPO     GitHub repo (default: h4444433333/code-ratchet)
   CODE_RATCHET_VERSION  Release tag (default: latest)
 EOF
       exit 0

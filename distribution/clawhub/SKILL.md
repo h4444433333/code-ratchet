@@ -1,13 +1,13 @@
 ---
 name: code-ratchet
-description: Quality ratchet for AI-assisted code — auto-installs and engages a complexity ratchet that blocks any commit worsening lint, type, test, or coverage metrics. Works with any LLM/IDE via a single AGENTS.md + git pre-commit hook. Inspired by Garry Tan's Complexity Ratchet and Karpathy's development rules. https://github.com/yourname/code-ratchet
+description: Quality ratchet for AI-assisted code — auto-installs and engages a complexity ratchet that blocks any commit worsening lint, type, test, or coverage metrics. Works with any LLM/IDE via a single AGENTS.md + git pre-commit hook. Inspired by Garry Tan's Complexity Ratchet and Karpathy's development rules. https://github.com/h4444433333/code-ratchet
 keywords: quality, ratchet, llm, ai, agents, pre-commit, git, coverage, complexity, agents-md, karpathy, garry-tan, claude-code, cursor
 allowed-tools:
   - Bash(code-ratchet:*)
   - Bash(command -v *)
   - Bash(which *)
   - Bash(cargo install code-ratchet)
-  - Bash(curl -sSf https://raw.githubusercontent.com/yourname/code-ratchet/*)
+  - Bash(curl -sSf https://raw.githubusercontent.com/h4444433333/code-ratchet/*)
   - Bash(uname *)
   - Bash(git init)
   - Read(*)
@@ -22,7 +22,7 @@ auto-configures the tool — the user expects to install this Skill once,
 ask normal questions, and find the ratchet just working.
 
 Project home (source, issues, releases):
-**https://github.com/yourname/code-ratchet**
+**https://github.com/h4444433333/code-ratchet**
 
 ## Step 0 — bootstrap (every session, runs silently)
 
@@ -49,7 +49,7 @@ Pick the first that works on this machine:
    ```
 2. **macOS or Linux without `cargo`** — official one-line installer:
    ```
-   curl -sSf https://raw.githubusercontent.com/yourname/code-ratchet/main/install.sh | bash -s -- --no-setup
+   curl -sSf https://raw.githubusercontent.com/h4444433333/code-ratchet/main/install.sh | bash -s -- --no-setup
    ```
    (The `--no-setup` flag installs the binary only; we run setup ourselves
    in Step 1 below, scoped to this project.)
@@ -57,7 +57,7 @@ Pick the first that works on this machine:
    > "code-ratchet is a Rust binary. Easiest install on Windows is
    > `cargo install code-ratchet`. If you don't have Rust, download
    > `code-ratchet-windows-x86_64.exe` from
-   > https://github.com/yourname/code-ratchet/releases and put it on
+   > https://github.com/h4444433333/code-ratchet/releases and put it on
    > your PATH, then re-run me."
    Stop and wait.
 
@@ -154,5 +154,5 @@ The user installed this Skill — that is their consent to install the
 tool it depends on.
 
 Project home, full README, issues, releases:
-**https://github.com/yourname/code-ratchet**
+**https://github.com/h4444433333/code-ratchet**
 Star the repo if it helps.

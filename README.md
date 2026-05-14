@@ -1,6 +1,6 @@
 # code-ratchet
 
-[![ci](https://github.com/yourname/code-ratchet/actions/workflows/ci.yml/badge.svg)](https://github.com/yourname/code-ratchet/actions/workflows/ci.yml)
+[![ci](https://github.com/h4444433333/code-ratchet/actions/workflows/ci.yml/badge.svg)](https://github.com/h4444433333/code-ratchet/actions/workflows/ci.yml)
 [![crates.io](https://img.shields.io/crates/v/code-ratchet.svg)](https://crates.io/crates/code-ratchet)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Linux%20%7C%20Windows-success)](#platform-support)
@@ -50,8 +50,8 @@ setup` in any project (or the curl-bash path does it automatically).
 | You're on…                | Install command                                                                                                           |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | Rust toolchain (any OS)   | `cargo install code-ratchet`                                                                                              |
-| macOS / Linux, no Rust    | `curl -sSf https://raw.githubusercontent.com/<author>/code-ratchet/main/install.sh \| bash`                                |
-| macOS via Homebrew        | `brew install <author>/tap/code-ratchet`   *(Tap published alongside v0.1)*                                                |
+| macOS / Linux, no Rust    | `curl -sSf https://raw.githubusercontent.com/h4444433333/code-ratchet/main/install.sh \| bash`                             |
+| macOS via Homebrew        | Coming soon                                                                                                                 |
 | Windows                   | `cargo install code-ratchet` (recommended) — or download the `code-ratchet-windows-x86_64.exe` from GitHub Releases        |
 
 `pip install` doesn't apply: code-ratchet is a Rust binary, not a Python
@@ -259,8 +259,8 @@ I do?**
 cargo login <your-crates.io-token>
 
 # Cut a release:
-git tag v0.1.0
-git push origin v0.1.0   # triggers .github/workflows/release.yml,
+git tag v0.1.1
+git push origin v0.1.1   # triggers .github/workflows/release.yml,
                          # which builds 5 binaries + publishes to crates.io
 ```
 
