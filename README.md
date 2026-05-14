@@ -1,12 +1,32 @@
 # code-ratchet
 
+[![ci](https://github.com/yourname/code-ratchet/actions/workflows/ci.yml/badge.svg)](https://github.com/yourname/code-ratchet/actions/workflows/ci.yml)
+[![crates.io](https://img.shields.io/crates/v/code-ratchet.svg)](https://crates.io/crates/code-ratchet)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Linux%20%7C%20Windows-success)](#platform-support)
+
 > A complexity ratchet for AI-assisted code. **Quality only goes up, never down.**
 
-One tool, one rules file, two commands. Works with any LLM, any IDE — because
-enforcement happens at `git commit` time, and the LLM-facing rules live in a
-single `AGENTS.md` that any modern agent reads from the repo root.
+One tool, one rules file, two commands. Works with **any LLM, any IDE** —
+Claude Code, Cursor, Aider, Codex, Cline, Continue — because enforcement
+happens at `git commit` time, and the LLM-facing rules live in a single
+`AGENTS.md` that any modern agent reads from the repo root.
 
 Inspired by Garry Tan's *Complexity Ratchet* and Karpathy's development rules.
+
+## Why this exists
+
+AI coding tools regress quality silently. They delete a test "because it
+was failing," skip a typecheck "to save tokens," or refactor adjacent
+code and quietly drop coverage. The next agent inherits the rotted
+state. After 50 turns the codebase is unrecognizable.
+
+`code-ratchet` is the mechanical pawl: it persists "best-ever" lint /
+type / test / coverage metrics, and any commit that worsens *any* of
+them is rejected. The agent **cannot make the gate pass by lowering the
+gate** — that's the failure mode the design is built to catch.
+
+It is two articles' worth of theory boiled down to two commands.
 
 ## What it does
 
@@ -160,6 +180,77 @@ code-ratchet uninstall       # reverse setup
 code-ratchet init            # write defaults without seeding (manual flow)
 code-ratchet install-hook    # install pre-commit hook only
 ```
+
+## What you see when the ratchet fires
+
+After a bad change, the LLM (and the human, via pre-commit) reads
+`.ratchet/feedback.md`:
+
+```markdown
+# code-ratchet feedback
+
+**Verdict:** Blocked — quality regression detected.
+
+## Regressions (these block the commit)
+| Metric             | Direction          | Baseline | Current | Delta  |
+|--------------------|--------------------|----------|---------|--------|
+| coverage_percent   | must not decrease  | 91.20    | 87.40   | -3.80  |
+| test_count         | must not decrease  | 180      | 174     | -6     |
+
+## Suggestions for the next agent turn
+- Coverage dropped from 91.20% to 87.40%. Add tests covering the changed
+  code paths — Capers Jones research shows steep defect-escape cliff
+  below ~85%.
+- Test count dropped from 180 to 174. If you removed a test, replace it
+  with an equivalent that covers the same intent.
+```
+
+The agent reads this and self-corrects in the next turn. No human
+needs to intervene.
+
+## FAQ
+
+**Q: How is this different from `pre-commit` (the Python framework)?**
+> `pre-commit` runs your linters and tests. It doesn't remember how many
+> warnings you had yesterday. `code-ratchet` does: it stores a baseline
+> and blocks any *regression*. You can run both together — they
+> compose.
+
+**Q: Will it work with my LLM / IDE?**
+> Yes. The git pre-commit hook is universal — it fires for any tool that
+> eventually runs `git commit`. The `AGENTS.md` rules file is picked up
+> by any modern agent (Cursor, Claude Code, Aider, Codex, Cline,
+> Continue all read top-level repo rules). No per-IDE adapter needed.
+
+**Q: My LLM keeps trying to delete tests to pass the ratchet. What do
+I do?**
+> `AGENTS.md` already tells it not to. If it persists, the ratchet still
+> catches it — `test_count` is one of the gated metrics, so a removed
+> test exits 1 at commit time and the LLM is forced to re-add equivalent
+> coverage.
+
+**Q: Does it work for languages other than Python / JS / TS?**
+> Yes — those are the auto-detected defaults, but `.ratchet.yml` is just
+> three commands (lint, typecheck, test+coverage). Point them at your
+> stack's tools (golangci-lint, cargo clippy, rspec, whatever) and the
+> ratchet works the same.
+
+**Q: Can I temporarily bypass it?**
+> `git commit --no-verify` works but the `AGENTS.md` rules forbid the
+> LLM from doing it. For a human override during exceptional work,
+> that's the escape valve.
+
+**Q: How big is the binary?**
+> ~1.2 MB. Single static binary. No runtime dependencies.
+
+**Q: Is the baseline file checked into git?**
+> Yes — `.ratchet/baseline.json` should be committed. That's how the
+> ratchet's state travels with the repo. Feedback files
+> (`.ratchet/feedback.json`, `.ratchet/feedback.md`) are gitignored.
+
+**Q: What if multiple branches have different baselines?**
+> The baseline file merges like any other JSON. On conflict, take the
+> *better* value of each field — that's the ratchet's whole point.
 
 ## Publishing (for maintainers)
 
