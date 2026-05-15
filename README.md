@@ -7,26 +7,23 @@
 
 > A complexity ratchet for AI-assisted code. **Quality only goes up, never down.**
 
-One tool, one rules file, two commands. Works with **any LLM, any IDE** —
-Claude Code, Cursor, Aider, Codex, Cline, Continue — because enforcement
-happens at `git commit` time, and the LLM-facing rules live in a single
-`AGENTS.md` that any modern agent reads from the repo root.
+Works with **any LLM, any IDE** by keeping repo rules in `AGENTS.md` and
+enforcing regressions at `git commit` time.
 
-Inspired by Garry Tan's *Complexity Ratchet* and Karpathy's development rules.
+## Quick Start
 
-## Why this exists
+```bash
+cargo install code-ratchet
+cd your-project
+code-ratchet setup
+```
 
-AI coding tools regress quality silently. They delete a test "because it
-was failing," skip a typecheck "to save tokens," or refactor adjacent
-code and quietly drop coverage. The next agent inherits the rotted
-state. After 50 turns the codebase is unrecognizable.
+After `setup`, just develop normally.
 
-`code-ratchet` is the mechanical pawl: it persists "best-ever" lint /
-type / test / coverage metrics, and any commit that worsens *any* of
-them is rejected. The agent **cannot make the gate pass by lowering the
-gate** — that's the failure mode the design is built to catch.
-
-It is two articles' worth of theory boiled down to two commands.
+- `git commit` automatically runs the ratchet gate
+- `code-ratchet check` manually verifies the repo right now
+- `code-ratchet setup` now auto-starts background `watch`
+- `code-ratchet watch` is still available for manual foreground use
 
 ## What it does
 
@@ -35,14 +32,15 @@ It is two articles' worth of theory boiled down to two commands.
 2. **Rejects any change that worsens any metric** at `git commit` time via
    a pre-commit hook. You cannot bypass the gate by lowering the gate
    (changing `.ratchet.yml` or deleting tests is exactly what it catches).
-3. **Writes `AGENTS.md` to the repo root** — a single universal rules file
-   any LLM in any IDE picks up. Karpathy's 12 rules + a four-phase loop +
-   the hard rules of the ratchet, all in one place.
-4. **`code-ratchet watch`** runs in a second terminal and re-runs L0 (lint)
-   on every save, keeping `.ratchet/feedback.md` fresh so the LLM gets
-   real-time signal without waiting for commit-time.
+3. **Writes `AGENTS.md` to the repo root** — a single repo rules file that
+   many agents can use for guidance, while the hook and CI remain the hard
+   enforcement layer. Karpathy's 12 rules + a four-phase loop + the hard
+   rules of the ratchet, all in one place.
+4. **Background `watch`** re-runs L0 (lint) on every save, keeping
+   `.ratchet/feedback.md` fresh so the LLM gets real-time signal without
+   waiting for commit-time.
 
-## Install + setup
+## Install
 
 Pick whichever install path suits you. After install, run `code-ratchet
 setup` in any project (or the curl-bash path does it automatically).
@@ -58,14 +56,15 @@ setup` in any project (or the curl-bash path does it automatically).
 package. `cargo install` is the Rust-native equivalent — one command, no
 build dependencies after the binary lands.
 
-Already installed? In any project:
+## Two entry paths
 
-```bash
-code-ratchet setup
-```
+`code-ratchet` now has two maintained entry paths:
 
-This downloads nothing; it just writes 4 files to your repo (config,
-AGENTS.md, baseline, pre-commit hook) and seeds the baseline.
+- **GitHub version**: the Rust CLI distributed from GitHub Releases and crates.io
+- **Skill version**: the Claude Skill under `skills/code-ratchet/`, powered by the bundled Python runtime
+
+The old plugin packaging is gone. The repo is organized around these two
+surfaces only.
 
 ## Platform support
 
@@ -92,34 +91,46 @@ five targets above (see `.github/workflows/release.yml`).
 ```
 Detected language : Python
 
-Planned actions (4):
+Planned actions (5):
   • Write .ratchet.yml          (config: which lint/typecheck/test commands)
   • Write AGENTS.md             (universal LLM rules)
   • Seed baseline               (runs L0/L1/L2 once)
   • Install git pre-commit hook
+  • Start background watch      (auto-refresh feedback)
 ```
 
-That's the whole product. No per-IDE adapters. No clawhub. No skill packages.
-Any AI tool that reads the repo (Cursor, Claude Code, Aider, Codex, Cline,
-Continue, …) will pick up `AGENTS.md` automatically or you can point it
-there once.
+After setup completes, `code-ratchet` also starts background `watch` and
+writes its output to `.ratchet/watch.log`.
 
-## Daily use
+Many AI tools can use `AGENTS.md` from the repo root for guidance; if your
+tool does not, point it there once and rely on the git hook / CI as the hard
+gate.
 
-The LLM writes code. Three things keep quality moving up:
+## Enable flow
+
+### GitHub version
+
+1. Install the Rust CLI from GitHub Releases, `cargo install`, or `install.sh`.
+2. Run `code-ratchet setup`.
+3. `setup` writes `.ratchet.yml` and `AGENTS.md`, runs the first full `check`, installs the git hook, and auto-starts background `watch`.
+4. During development, re-run `code-ratchet check` after code changes.
+5. At commit time, the git pre-commit hook remains the hard gate.
+
+### Skill version
+
+1. Install the Skill from `skills/code-ratchet/`.
+2. In Claude Code, run `/ratchet-build`.
+3. The bundled Python runtime writes `.ratchet.yml` and `AGENTS.md`, runs the first full `check`, installs the git hook, and auto-starts background `watch`.
+4. During development in that session, re-run the ratchet `check` after code changes.
+5. `/ratchet-close` stops session-level auto behavior and stops background `watch`; `/ratchet-uninstall` removes repo-owned files.
+
+## Runtime flow
 
 | When                    | What runs                       | What blocks |
 | ----------------------- | ------------------------------- | --- |
-| As LLM edits            | `code-ratchet watch` (optional) | nothing — informational, writes `feedback.md` |
+| As LLM edits            | background `watch` (auto-started by enablement) | nothing — informational, writes `feedback.md` |
 | LLM tries `git commit`  | `.git/hooks/pre-commit`         | regression → commit rejected + feedback.md written |
 | In CI                   | `code-ratchet check` job        | same as above, blocks PR |
-
-When blocked, `.ratchet/feedback.md` contains:
-- The specific metrics that regressed (baseline → current → delta)
-- Targeted suggestions ("Coverage dropped from 91% to 88%. Add tests for…")
-- The exit code the hook returned
-
-The LLM reads `feedback.md`, fixes the regressions, re-commits.
 
 ## Configuration
 
@@ -143,10 +154,8 @@ Empty `command` disables a layer. `required: false` makes a layer advisory.
 Defaults are emitted for Python, JavaScript, TypeScript. Other languages:
 just edit the commands.
 
-## How quality goes up
-
 After every successful `code-ratchet check`, the baseline is updated to the
-**better** value of each field:
+better value of each field:
 
 | Field             | Direction        |
 | ----------------- | ---------------- |
@@ -159,6 +168,18 @@ After every successful `code-ratchet check`, the baseline is updated to the
 A small 0.1pp tolerance on coverage handles floating-point + test
 discovery noise. Everything else is exact.
 
+## Commands
+
+```bash
+code-ratchet setup
+code-ratchet check
+code-ratchet watch
+code-ratchet status
+code-ratchet uninstall
+code-ratchet init
+code-ratchet install-hook
+```
+
 ## Uninstall
 
 ```bash
@@ -169,104 +190,26 @@ Removes `.ratchet/`, `.ratchet.yml`, `AGENTS.md` (only if it bears our
 ownership marker), and the git pre-commit hook (only if it's ours).
 Hand-edited `AGENTS.md` and third-party hooks are left alone.
 
-## Commands
+## Python entry
 
-```
-code-ratchet setup           # the recommended entry point
-code-ratchet check           # run all layers, compare baseline, write feedback
-code-ratchet watch           # real-time L0 (lint) feedback while editing
-code-ratchet status          # print current baseline
-code-ratchet uninstall       # reverse setup
-code-ratchet init            # write defaults without seeding (manual flow)
-code-ratchet install-hook    # install pre-commit hook only
-```
+If your team mostly works in Python, use [examples/python](examples/python/README.md) as the code entrypoint.
 
-## What you see when the ratchet fires
+- `examples/python/code_ratchet.py` wraps the Rust CLI
+- `examples/python/main.py` now supports a `prepare` phase before coding and a `check` phase after coding
+- `examples/python/main.py` keeps bounded local history; default retention is `200`
+- this is the recommended way to integrate `code-ratchet` into a Python agent loop without re-implementing the ratchet in Python
 
-After a bad change, the LLM (and the human, via pre-commit) reads
-`.ratchet/feedback.md`:
-
-```markdown
-# code-ratchet feedback
-
-**Verdict:** Blocked — quality regression detected.
-
-## Regressions (these block the commit)
-| Metric             | Direction          | Baseline | Current | Delta  |
-|--------------------|--------------------|----------|---------|--------|
-| coverage_percent   | must not decrease  | 91.20    | 87.40   | -3.80  |
-| test_count         | must not decrease  | 180      | 174     | -6     |
-
-## Suggestions for the next agent turn
-- Coverage dropped from 91.20% to 87.40%. Add tests covering the changed
-  code paths — Capers Jones research shows steep defect-escape cliff
-  below ~85%.
-- Test count dropped from 180 to 174. If you removed a test, replace it
-  with an equivalent that covers the same intent.
-```
-
-The agent reads this and self-corrects in the next turn. No human
-needs to intervene.
-
-## FAQ
-
-**Q: How is this different from `pre-commit` (the Python framework)?**
-> `pre-commit` runs your linters and tests. It doesn't remember how many
-> warnings you had yesterday. `code-ratchet` does: it stores a baseline
-> and blocks any *regression*. You can run both together — they
-> compose.
-
-**Q: Will it work with my LLM / IDE?**
-> Yes. The git pre-commit hook is universal — it fires for any tool that
-> eventually runs `git commit`. The `AGENTS.md` rules file is picked up
-> by any modern agent (Cursor, Claude Code, Aider, Codex, Cline,
-> Continue all read top-level repo rules). No per-IDE adapter needed.
-
-**Q: My LLM keeps trying to delete tests to pass the ratchet. What do
-I do?**
-> `AGENTS.md` already tells it not to. If it persists, the ratchet still
-> catches it — `test_count` is one of the gated metrics, so a removed
-> test exits 1 at commit time and the LLM is forced to re-add equivalent
-> coverage.
-
-**Q: Does it work for languages other than Python / JS / TS?**
-> Yes — those are the auto-detected defaults, but `.ratchet.yml` is just
-> three commands (lint, typecheck, test+coverage). Point them at your
-> stack's tools (golangci-lint, cargo clippy, rspec, whatever) and the
-> ratchet works the same.
-
-**Q: Can I temporarily bypass it?**
-> `git commit --no-verify` works but the `AGENTS.md` rules forbid the
-> LLM from doing it. For a human override during exceptional work,
-> that's the escape valve.
-
-**Q: How big is the binary?**
-> ~1.2 MB. Single static binary. No runtime dependencies.
-
-**Q: Is the baseline file checked into git?**
-> Yes — `.ratchet/baseline.json` should be committed. That's how the
-> ratchet's state travels with the repo. Feedback files
-> (`.ratchet/feedback.json`, `.ratchet/feedback.md`) are gitignored.
-
-**Q: What if multiple branches have different baselines?**
-> The baseline file merges like any other JSON. On conflict, take the
-> *better* value of each field — that's the ratchet's whole point.
-
-## Publishing (for maintainers)
+## Release
 
 ```bash
-# One-time:
 cargo login <your-crates.io-token>
-
-# Cut a release:
 git tag v0.1.1
-git push origin v0.1.1   # triggers .github/workflows/release.yml,
-                         # which builds 5 binaries + publishes to crates.io
+git push origin v0.1.1
 ```
 
-The release workflow uploads platform binaries to GitHub Releases and runs
-`cargo publish` automatically. Set `CARGO_REGISTRY_TOKEN` in the repo
-secrets first.
+Before release, set `CARGO_REGISTRY_TOKEN` in repo secrets. Tag push triggers
+`.github/workflows/release.yml`, which uploads binaries to GitHub Releases and
+publishes to crates.io.
 
 ## License
 

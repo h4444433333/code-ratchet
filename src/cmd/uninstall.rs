@@ -11,6 +11,7 @@ use anyhow::Result;
 
 use crate::cmd::setup::OWNERSHIP_MARKER;
 use crate::cmd::{config_path, ratchet_dir};
+use crate::cmd::watch;
 
 pub struct UninstallOpts {
     pub yes: bool,
@@ -45,6 +46,7 @@ pub fn run(repo_root: &Path, opts: UninstallOpts) -> Result<()> {
 
 #[derive(Debug, Clone, PartialEq)]
 enum Removal {
+    BackgroundWatch,
     RatchetDir,
     RatchetYml,
     AgentsMd,
@@ -54,6 +56,7 @@ enum Removal {
 impl std::fmt::Display for Removal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", match self {
+            Removal::BackgroundWatch => "background watch process (if running)",
             Removal::RatchetDir    => ".ratchet/ (baseline + feedback)",
             Removal::RatchetYml    => ".ratchet.yml",
             Removal::AgentsMd      => "AGENTS.md (if ours)",
@@ -64,6 +67,7 @@ impl std::fmt::Display for Removal {
 
 fn plan_removals(repo_root: &Path, keep_baseline: bool) -> Vec<Removal> {
     let mut out: Vec<Removal> = Vec::new();
+    if watch::active_watch_pid(repo_root).is_some() { out.push(Removal::BackgroundWatch); }
     if !keep_baseline && ratchet_dir(repo_root).is_dir() { out.push(Removal::RatchetDir); }
     if config_path(repo_root).exists() { out.push(Removal::RatchetYml); }
     if agents_md_is_ours(repo_root)    { out.push(Removal::AgentsMd); }
@@ -73,6 +77,12 @@ fn plan_removals(repo_root: &Path, keep_baseline: bool) -> Vec<Removal> {
 
 fn remove(repo_root: &Path, r: &Removal) -> Result<String> {
     match r {
+        Removal::BackgroundWatch => {
+            match watch::stop_background(repo_root)? {
+                Some(pid) => Ok(format!("stopped background watch pid {}", pid)),
+                None => Ok("background watch was not running".into()),
+            }
+        }
         Removal::RatchetDir => {
             let p = ratchet_dir(repo_root);
             fs::remove_dir_all(&p)?;

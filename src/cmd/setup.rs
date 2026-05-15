@@ -1,6 +1,7 @@
 //! `code-ratchet setup` — the one-command UX.
 //!
-//! Minimalist: detects the project language, writes 4 things, asks once.
+//! Minimalist: detects the project language, writes repo files, asks once,
+//! and auto-starts background watch.
 //! No IDE adapters — a single `AGENTS.md` covers any LLM/IDE that reads
 //! repo-root rules files.
 
@@ -13,6 +14,7 @@ use anyhow::Result;
 use crate::baseline::Baseline;
 use crate::cmd::detect::{detect_language, DetectedLanguage};
 use crate::cmd::{config_path, ratchet_dir};
+use crate::cmd::watch::{self, WatchBackgroundStatus};
 use crate::config::Config;
 
 const AGENTS_MD:        &str = include_str!("../../templates/AGENTS.md");
@@ -31,6 +33,7 @@ enum Action {
     WriteAgentsMd,
     RunBaselineCheck,
     InstallGitHook,
+    StartBackgroundWatch,
 }
 
 impl Action {
@@ -40,6 +43,7 @@ impl Action {
             Action::WriteAgentsMd     => "Write AGENTS.md (universal LLM rules)".into(),
             Action::RunBaselineCheck  => "Seed baseline (runs L0/L1/L2 once)".into(),
             Action::InstallGitHook    => "Install git pre-commit hook".into(),
+            Action::StartBackgroundWatch => "Start background watch (auto-refresh feedback)".into(),
         }
     }
 }
@@ -80,7 +84,8 @@ pub fn run(repo_root: &Path, opts: SetupOpts) -> Result<()> {
     println!("✓ Setup complete. Ratchet engaged.");
     println!();
     println!("  Check    : code-ratchet check");
-    println!("  Watch    : code-ratchet watch    (real-time L0 feedback)");
+    println!("  Watch    : auto-started in background; log at .ratchet/watch.log");
+    println!("             code-ratchet watch    (optional foreground mode)");
     println!("  Status   : code-ratchet status");
     println!("  Uninstall: code-ratchet uninstall");
     Ok(())
@@ -98,6 +103,7 @@ fn plan(repo_root: &Path, lang: DetectedLanguage, force: bool) -> Vec<Action> {
     if repo_root.join(".git").is_dir() {
         out.push(Action::InstallGitHook);
     }
+    out.push(Action::StartBackgroundWatch);
     out
 }
 
@@ -149,6 +155,16 @@ fn execute(repo_root: &Path, action: Action, force: bool) -> Result<String> {
             }
             crate::cmd::install_hook::run(repo_root, force)?;
             Ok("Installed .git/hooks/pre-commit".into())
+        }
+        Action::StartBackgroundWatch => {
+            match watch::start_background(repo_root)? {
+                WatchBackgroundStatus::Started(pid) => {
+                    Ok(format!("Started background watch pid={} (.ratchet/watch.log)", pid))
+                }
+                WatchBackgroundStatus::AlreadyRunning(pid) => {
+                    Ok(format!("Background watch already running pid={}", pid))
+                }
+            }
         }
     }
 }
